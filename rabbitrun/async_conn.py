@@ -11,8 +11,8 @@ import pika
 
 from pika.adapters.asyncio_connection import AsyncioConnection
 
-from . import config
-
+# from . import config
+import config
 
 LOG_FORMAT = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
               '-35s %(lineno) -5d: %(message)s')
@@ -130,7 +130,7 @@ class AsyncConsumer(object):
             callback=cb)
 
     def on_exchange_declareok(self, 
-                              _unused_frame: pika.Frame.Method = None,
+                              _unused_frame: pika.frame.Method = None,
                               userdata: str = None):
         """Invoked when RabbitMQ has finished the Exchange.Declare RPC
         command.
@@ -199,25 +199,40 @@ class AsyncConsumer(object):
 
     def on_message(
         self,
-        _unused_channel: pika.channel.Channel = None, 
-        basic_deliver: pika.Spec.Basic.Deliver = None, 
-        properties: pika.Spec.BasicProperties = None, 
+        _unused_channel: pika.channel.Channel = None,
+        basic_deliver: pika.spec.Basic.Deliver = None,
+        properties: pika.spec.BasicProperties = None,
         body: bytes = None):
         """Called when a message arrives from rabbitmq.
 
         :param pika.channel.Channel _unused_channel: The channel object
-        :param pika.Spec.Basic.Deliver: basic_deliver method
-        :param pika.Spec.BasicProperties: properties
+        :param pika.spec.Basic.Deliver: basic_deliver method
+        :param pika.spec.BasicProperties: properties
         :param bytes body: The message body
         """
         LOGGER.info('Received message # %s from %s: %s',
                     basic_deliver.delivery_tag, properties.app_id, body)
         self.acknowledge_message(basic_deliver.delivery_tag)
 
+        self.process_message(
+            _unused_channel=_unused_channel,
+            basic_deliver=basic_deliver,
+            properties=properties,
+            body=body)
+
     def acknowledge_message(self, delivery_tag):
 
         LOGGER.info('Acknowledging message %s', delivery_tag)
         self._channel.basic_ack(delivery_tag)
+
+    def process_message(
+        self,
+        _unused_channel: pika.channel.Channel = None,
+        basic_deliver: pika.spec.Basic.Deliver = None,
+        properties: pika.spec.BasicProperties = None,
+        body: bytes = None):
+        """Processing the message. """
+        raise NotImplementedError()
 
     def stop_consuming(self):
         """Send the Basic.Cancel to stop consumming."""
@@ -262,15 +277,17 @@ class AsyncConsumer(object):
             LOGGER.info('Stopped')
 
 
-class ReconnectingAsyncConsumer(object):
+class ConnectAsyncConsumer(object):
     """A consumer that reconnects if the nested AsyncConsumer indicates that a
        reconnection is necessary.
     """
 
-    def __init__(self, amqp_url):
+    def __init__(self,
+                 amqp_url: str = None,
+                 consumer_class: AsyncConsumer = AsyncConsumer):
         self._reconnect_delay = 0
         self._amqp_url = amqp_url
-        self._consumer = AsyncConsumer(self._amqp_url)
+        self._consumer = consumer_class(self._amqp_url)
 
     def run(self):
         while True:
@@ -304,12 +321,12 @@ def run(user: str = None,
         password: str = None,
         host: str = None):
     """Running the asyncio connection. 
-    The format of the url passed to ReconnectingAsyncConsumer is as follow:
+    The format of the url passed to ConnectAsyncConsumer is as follow:
     'amqp://user:pass@host:5672/%2F'
     """
     logging.basicConfig(level=logging.DEBUG, format=LOG_FORMAT)
     url = f"amqp://{user}:{password}@{host}:{config.RABBIT_PORT}/%2F"
-    consumer = ReconnectingAsyncConsumer(amqp_url)
+    consumer = ConnectAsyncConsumer(url)
     consumer.run()
     
 
