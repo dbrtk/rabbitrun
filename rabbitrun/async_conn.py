@@ -35,9 +35,9 @@ class ConsumeMessage(object):
 
     def __call__(self):
 
-        self.process_msg()
+        self.process_msg(obj=self.obj)
 
-    def process_msg(self):
+    def process_msg(self, obj: dict = None):
 
         raise NotImplementedError()
 
