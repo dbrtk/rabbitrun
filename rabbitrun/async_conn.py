@@ -4,6 +4,7 @@ https://github.com/pika/pika/blob/master/examples/asyncio_consumer_example.py
 
 # -*- coding: utf-8 -*-
 
+import json
 import functools
 import logging
 import time
@@ -11,12 +12,34 @@ import pika
 
 from pika.adapters.asyncio_connection import AsyncioConnection
 
-# from . import config
-import config
+from . import config
+
+# todo(): delete
+# import config
 
 LOG_FORMAT = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
               '-35s %(lineno) -5d: %(message)s')
 LOGGER = logging.getLogger(__name__)
+
+
+class ConsumeMessage(object):
+    """Consumes a JSON message. A subclass of this method has to be passed to
+       AsyncConsumer. This subclass will have to implement a `process_msg`
+       method.
+    """
+    def __init__(self,
+                 properties: pika.spec.BasicProperties = None,
+                 body: bytes = None):
+
+        self.obj = json.loads(body)
+
+    def __call__(self):
+
+        self.process_msg()
+
+    def process_msg(self):
+
+        raise NotImplementedError()
 
 
 class AsyncConsumer(object):
@@ -26,7 +49,9 @@ class AsyncConsumer(object):
     QUEUE = 'text'
     ROUTING_KEY = 'example.text'
 
-    def __init__(self, amqp_url: (str, pika.ConnectionParameters,) = None):
+    def __init__(self,
+                 amqp_url: (str, pika.ConnectionParameters,) = None,
+                 consume_class: ConsumeMessage = None):
         """Creatign a new consummer with a amqp url or an instance of 
         pika.ConnectionParameters
         :param str amqp_url: The AMQP url to connect with
@@ -43,6 +68,8 @@ class AsyncConsumer(object):
         # In production, experiment with higher prefetch values
         # for higher consumer throughput
         self._prefetch_count = 1
+
+        self.consume_class = consume_class
 
     def connect(self):
         """Connecting to RabbitMQ
@@ -214,25 +241,12 @@ class AsyncConsumer(object):
                     basic_deliver.delivery_tag, properties.app_id, body)
         self.acknowledge_message(basic_deliver.delivery_tag)
 
-        self.process_message(
-            _unused_channel=_unused_channel,
-            basic_deliver=basic_deliver,
-            properties=properties,
-            body=body)
+        self.consume_class(properties=properties, body=body)()
 
     def acknowledge_message(self, delivery_tag):
 
         LOGGER.info('Acknowledging message %s', delivery_tag)
         self._channel.basic_ack(delivery_tag)
-
-    def process_message(
-        self,
-        _unused_channel: pika.channel.Channel = None,
-        basic_deliver: pika.spec.Basic.Deliver = None,
-        properties: pika.spec.BasicProperties = None,
-        body: bytes = None):
-        """Processing the message. """
-        raise NotImplementedError()
 
     def stop_consuming(self):
         """Send the Basic.Cancel to stop consumming."""
@@ -284,10 +298,11 @@ class ConnectAsyncConsumer(object):
 
     def __init__(self,
                  amqp_url: str = None,
-                 consumer_class: AsyncConsumer = AsyncConsumer):
+                 consume_class: ConsumeMessage = None):
         self._reconnect_delay = 0
         self._amqp_url = amqp_url
-        self._consumer = consumer_class(self._amqp_url)
+        self._consumer = AsyncConsumer(
+            amqp_url=self._amqp_url, consume_class=consume_class)
 
     def run(self):
         while True:
