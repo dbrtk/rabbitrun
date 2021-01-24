@@ -32,6 +32,7 @@ class ConsumeMessage(object):
                  body: bytes = None):
 
         self.obj = json.loads(body)
+        self.properties = properties
 
     def __call__(self):
 
