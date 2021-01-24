@@ -301,8 +301,8 @@ class ReconnectingAsyncConsumer(object):
 
 
 def run(user: str = None, 
-                password: str = None,
-                host: str = None):
+        password: str = None,
+        host: str = None):
     """Running the asyncio connection. 
     The format of the url passed to ReconnectingAsyncConsumer is as follow:
     'amqp://user:pass@host:5672/%2F'
