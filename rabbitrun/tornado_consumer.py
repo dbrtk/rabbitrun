@@ -2,6 +2,7 @@ from pika import adapters
 import pika
 import logging
 
+from . import config
 from .consume_class import ConsumeMessage
 
 
