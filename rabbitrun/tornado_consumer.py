@@ -2,7 +2,7 @@ from pika import adapters
 import pika
 import logging
 
-from .consume_class import ConsumeClass
+from .consume_class import ConsumeMessage
 
 
 LOG_FORMAT = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
@@ -29,7 +29,7 @@ class TornadoConsumer(object):
     ROUTING_KEY = 'example.text'
 
     def __init__(self, amqp_url: str = None, 
-                 consume_class: ConsumeClass = None):
+                 consume_class: ConsumeMessage = None):
         """Create a new instance of the consumer class, passing in the AMQP
         URL used to connect to RabbitMQ.
 
