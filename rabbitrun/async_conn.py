@@ -31,14 +31,15 @@ class ConsumeMessage(object):
                  properties: pika.spec.BasicProperties = None,
                  body: bytes = None):
 
-        self.obj = json.loads(body)
+        self.payload = json.loads(body)
         self.properties = properties
 
     def __call__(self):
 
-        self.process_msg(obj=self.obj)
+        self.process_msg(payload=self.payload, properties=self.properties)
 
-    def process_msg(self, obj: dict = None):
+    def process_msg(self, payload: dict = None,
+                    properties: pika.spec.BasicProperties = None):
 
         raise NotImplementedError()
 
@@ -333,21 +334,23 @@ class ConnectAsyncConsumer(object):
 
 
 
-def run(user: str = None, 
+def run(user: str = None,
         password: str = None,
         host: str = None,
-        vhost: str = None):
+        vhost: str = None,
+        consume_class: ConsumeMessage = None):
     """Running the asyncio connection. 
     The format of the url passed to ConnectAsyncConsumer is as follow:
     'amqp://user:pass@host:5672/%2F'
     """
+    if not isinstance(consume_class, ConsumeMessage):
+        raise TypeError(consume_class)
     logging.basicConfig(level=logging.DEBUG, format=LOG_FORMAT)
     url = f"amqp://{user}:{password}@{host}:{config.RABBIT_PORT}/{vhost}"
-    consumer = ConnectAsyncConsumer(url)
+    consumer = ConnectAsyncConsumer(
+        amqp_url=url, consume_class=consume_class)
     consumer.run()
-    
+
 
 if __name__ == '__main__':
     run(user='guest', password='guest', host='localhost')
-
-
