@@ -335,13 +335,14 @@ class ConnectAsyncConsumer(object):
 
 def run(user: str = None, 
         password: str = None,
-        host: str = None):
+        host: str = None,
+        vhost: str = None):
     """Running the asyncio connection. 
     The format of the url passed to ConnectAsyncConsumer is as follow:
     'amqp://user:pass@host:5672/%2F'
     """
     logging.basicConfig(level=logging.DEBUG, format=LOG_FORMAT)
-    url = f"amqp://{user}:{password}@{host}:{config.RABBIT_PORT}/%2F"
+    url = f"amqp://{user}:{password}@{host}:{config.RABBIT_PORT}/{vhost}"
     consumer = ConnectAsyncConsumer(url)
     consumer.run()
     
