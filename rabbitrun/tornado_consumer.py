@@ -2,6 +2,9 @@ from pika import adapters
 import pika
 import logging
 
+from .consume_class import ConsumeClass
+
+
 LOG_FORMAT = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
               '-35s %(lineno) -5d: %(message)s')
 LOGGER = logging.getLogger(__name__)
@@ -25,7 +28,8 @@ class TornadoConsumer(object):
     QUEUE = 'text'
     ROUTING_KEY = 'example.text'
 
-    def __init__(self, amqp_url):
+    def __init__(self, amqp_url: str = None, 
+                 consume_class: ConsumeClass = None):
         """Create a new instance of the consumer class, passing in the AMQP
         URL used to connect to RabbitMQ.
 
@@ -37,6 +41,8 @@ class TornadoConsumer(object):
         self._closing = False
         self._consumer_tag = None
         self._url = amqp_url
+        
+        self._consume_class = consume_class
 
     def connect(self):
         """This method connects to RabbitMQ, returning the connection handle.
@@ -237,6 +243,10 @@ class TornadoConsumer(object):
         LOGGER.info('Received message # %s from %s: %s',
                     basic_deliver.delivery_tag, properties.app_id, body)
         self.acknowledge_message(basic_deliver.delivery_tag)
+        
+        # this line is invoking the consume class that will process the 
+        # message.
+        self._consume_class(properties=properties, body=body)()
 
     def on_cancelok(self, unused_frame):
         """This method is invoked by pika when RabbitMQ acknowledges the
@@ -326,6 +336,22 @@ class TornadoConsumer(object):
         self.stop_consuming()
         self._connection.ioloop.start()
         LOGGER.info('Stopped')
+
+
+def run(user: str = None,
+        password: str = None,
+        host: str = None,
+        vhost: str = None,
+        consume_class: ConsumeMessage = None):
+
+    logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
+    url = f"amqp://{user}:{password}@{host}:{config.RABBIT_PORT}/{vhost}"
+    consumer = TornadoConsumer(amqp_url=url, consume_class=consume_class)
+
+    try:
+        consumer.run()
+    except KeyboardInterrupt:
+        consumer.stop()
 
 
 def main():
