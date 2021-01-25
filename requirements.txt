@@ -1,1 +1,1 @@
-pika
+git+https://github.com/pika/pika.git@master
