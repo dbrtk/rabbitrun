@@ -1,2 +1,1 @@
-
--e git://github.com/pika/pika.git#egg=pika
+git+https://github.com/pika/pika.git@master#egg=pika
