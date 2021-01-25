@@ -1,4 +1,8 @@
 
+import json
+
+import pika
+
 
 class ConsumeMessage(object):
     """Consumes a JSON message. A subclass of this method has to be passed to
