@@ -343,8 +343,6 @@ def run(user: str = None,
     The format of the url passed to ConnectAsyncConsumer is as follow:
     'amqp://user:pass@host:5672/%2F'
     """
-    if not isinstance(consume_class, ConsumeMessage):
-        raise TypeError(consume_class)
     logging.basicConfig(level=logging.DEBUG, format=LOG_FORMAT)
     url = f"amqp://{user}:{password}@{host}:{config.RABBIT_PORT}/{vhost}"
     consumer = ConnectAsyncConsumer(
